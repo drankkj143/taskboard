@@ -6,11 +6,12 @@ import Task from "./Task"
 class Todo extends React.Component{
 	render(){
 		return <div className="todo-block">
-			<Title text = "Todo"/>
+			<Title text = "Todo" bg="#edf2f7"/>
 			<AddButton onAdd={this.props.onAdd} type = "todo"/>
 			<div className="tasks">
 				{this.props.tasks.map((task) => <Task onDelete={this.props.onDelete} 
-				type="todo" key={task.id} text = {task.task} id = {task.id}/>)}
+				type="todo" key={task.id} text = {task.task} id = {task.id}
+				onChange={this.props.onChange}/>)}
 			</div>
 		</div>
 	}

@@ -8,21 +8,21 @@ class Task extends React.Component{
 		this.state = {
 			isEdit: false,
 			text: this.props.text
+
 		}
 	}
 	render(){
 		return <div className="task" onClick={() => {
 			if(!this.state.isEdit)
-			{
 				this.setState({
 					isEdit: !this.state.isEdit
 				})
-			}
 		}}>
 			{this.state.isEdit ? <input defaultValue={this.state.text}
 			onBlur={(e) => {
 					this.setState({isEdit: !this.state.isEdit})
 					this.setState({text: e.target.value})
+					this.props.onChange(this.props.type, this.props.id, e.target.value)
 				}}/> : this.state.text}
 			
 			<MdDeleteForever className="delete-icon" onClick={(ev) => {
