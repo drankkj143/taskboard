@@ -3,73 +3,163 @@ import Todo from "./components/Todo"
 import InProgress from "./components/InProgress"
 import Blocked from "./components/Blocked"
 import Completed from "./components/Completed"
+import Task from "./components/Task"
+import ThemeButton from "./components/ThemeButton"
 
-import { DndProvider } from "react-dnd"
-import { HTML5Backend } from "react-dnd-html5-backend"
+import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd"
+
 
 class App extends React.Component{
     constructor(props){
         super(props)
 
         this.state = {
+            isLight: true,
             tasks:{todo:[],inprogress:[],blocked:[],completed:[]}
         }
 
         this.onAdd = this.onAdd.bind(this)
         this.onDelete = this.onDelete.bind(this)
         this.saveChanges = this.saveChanges.bind(this)
+        this.changeTheme = this.changeTheme.bind(this)
     }
-
-	onReorder = (type, newTasks) => {
-		this.setState(prev => ({
-			tasks: {
-			...prev.tasks,
-			[type]: newTasks
-			}
-		}))
-		localStorage.setItem("tasks", JSON.stringify({
-			...this.state.tasks,
-			[type]: newTasks
-		}))
-	}
 
 
     componentDidMount() {
         const tasks = JSON.parse(localStorage.getItem('tasks'))
-        if (tasks !== null) {
+        const theme = JSON.parse(localStorage.getItem('theme'))
+        if (tasks !== null)
             this.setState({tasks:tasks})
-            console.log(tasks)
-        }
         else this.setState({tasks:{
                 todo: [{id: 1, task: "Task1"},{id: 2, task: "Task2"},],
                 inprogress: [{id: 1, task: "Task1"},{id: 2, task: "Task2"},],
                 blocked: [{id: 1, task: "Task1"},{id: 2, task: "Task2"},], 
                 completed: [{id: 1, task: "Task1"},{id: 2, task: "Task2"},],
-            }})
+        }})
+
+        if (theme !== null)
+            this.setState({isLight: theme})
+    }
+
+    componentDidUpdate(_, prev){
+        if (prev.isLight !== this.state.isLight){
+            localStorage.setItem("theme", JSON.stringify(this.state.isLight))
+            document.body.style.backgroundColor = this.state.isLight ? "#f5f5f5" : "#1a202c"
+        }
     }
 
     render(){
         return (
-            <DndProvider backend={HTML5Backend}>
-                <div className="ui-theme-light">
-                    <h1>Welcome to TaskBoard</h1>
+            <div className={this.state.isLight ? "ui-theme-light" : "ui-theme-dark"}>
+                <h1>Welcome to TaskBoard</h1>
+                <DragDropContext onDragEnd={this.onDragEnd}>
                     <div className="content">
-                        <Todo tasks = {this.state.tasks.todo} onAdd = {this.onAdd}
-                        onDelete={this.onDelete} onChange={this.saveChanges}
-						onReorder={this.onReorder}/>
-                        <InProgress tasks = {this.state.tasks.inprogress} onAdd = {this.onAdd}
-                        onDelete={this.onDelete} onChange={this.saveChanges}
-						onReorder={this.onReorder}/>
-                        <Blocked tasks = {this.state.tasks.blocked} onAdd = {this.onAdd}
-                        onDelete={this.onDelete} onChange={this.saveChanges}
-						onReorder={this.onReorder}/>
-                        <Completed tasks = {this.state.tasks.completed} onAdd = {this.onAdd}
-                        onDelete={this.onDelete} onChange={this.saveChanges}
-						onReorder={this.onReorder}/>
+                        {Object.keys(this.state.tasks).map((columnId) => (
+                            <Droppable droppableId={columnId} key={columnId}>
+                            {(provided) => (
+                                <div
+                                className="todo-block"
+                                ref={provided.innerRef}
+                                {...provided.droppableProps}
+                                >
+                                {columnId === "todo" && <Todo {...this.getColumnProps("todo")} />}
+                                {columnId === "inprogress" && <InProgress {...this.getColumnProps("inprogress")} />}
+                                {columnId === "blocked" && <Blocked {...this.getColumnProps("blocked")} />}
+                                {columnId === "completed" && <Completed {...this.getColumnProps("completed")} />}
+
+                                <div className="tasks">
+                                    {this.state.tasks[columnId].map((task, index) => (
+                                    <Draggable
+                                    key={`${columnId}-${task.id}`}
+                                    draggableId={`${columnId}-${task.id}-${index}`}
+                                    index={index}
+                                    >
+                                        {(provided) => (
+                                            <div
+                                            ref={provided.innerRef}
+                                            {...provided.draggableProps}
+                                            {...provided.dragHandleProps}
+                                            >
+                                            <Task
+                                                onDelete={this.onDelete}
+                                                type={columnId}
+                                                id={task.id}
+                                                text={task.task}
+                                                onChange={this.saveChanges}
+                                            />
+                                            </div>
+                                        )}
+                                    </Draggable>
+                                ))}
+                                </div>
+                                {provided.placeholder}
+                                </div>
+                            )}
+                            </Droppable>
+                        ))}
                     </div>
-                </div>
-            </DndProvider>
+                </DragDropContext>
+                <ThemeButton changeTheme={this.changeTheme} isLight={this.state.isLight}/>
+            </div>
+            
         )
+    }
+
+    changeTheme(isLight){
+        this.setState({isLight: isLight})
+    }
+
+    onDragEnd = (result) => {
+        const { source, destination } = result;
+
+        if (!destination) return;
+
+        if (
+            source.droppableId === destination.droppableId &&
+            source.index === destination.index
+        ) {
+            return;
+        }
+
+        const sourceCol = source.droppableId;
+        const destCol = destination.droppableId;
+
+        const sourceTasks = Array.from(this.state.tasks[sourceCol]);
+        const destTasks = Array.from(this.state.tasks[destCol]);
+
+        const [movedTask] = sourceTasks.splice(source.index, 1);
+
+        if (sourceCol === destCol) {
+            sourceTasks.splice(destination.index, 0, movedTask);
+            this.setState(
+            (prev) => ({
+                tasks: { ...prev.tasks, [sourceCol]: sourceTasks },
+            }),
+            () => localStorage.setItem("tasks", JSON.stringify(this.state.tasks))
+            );
+        } else {
+            destTasks.splice(destination.index, 0, movedTask);
+            this.setState(
+            (prev) => ({
+                tasks: {
+                ...prev.tasks,
+                [sourceCol]: sourceTasks,
+                [destCol]: destTasks,
+                },
+            }),
+            () => localStorage.setItem("tasks", JSON.stringify(this.state.tasks))
+            );
+        }
+    };
+
+
+    getColumnProps(type) {
+        return {
+            tasks: this.state.tasks[type],
+            onAdd: this.onAdd,
+            onDelete: this.onDelete,
+            onChange: this.saveChanges,
+        };
     }
 
     onDelete(type, id){
@@ -86,14 +176,16 @@ class App extends React.Component{
         this.setState(prevState => {
             const updatedTasks = { ...prevState.tasks }
             const updatedArray = [...updatedTasks[type]]
-            updatedArray[id - 1] = {
-            ...updatedArray[id - 1],
-            task: text
+            const taskIndex = updatedArray.findIndex(t => t.id === id)
+            if (taskIndex !== -1) {
+            updatedArray[taskIndex] = {
+                ...updatedArray[taskIndex],
+                task: text
+            }
             }
             updatedTasks[type] = updatedArray
-            localStorage.setItem("tasks", JSON.stringify(updatedTasks))
             return { tasks: updatedTasks }
-        })
+        }, () => localStorage.setItem("tasks", JSON.stringify(this.state.tasks)))
     }
 
     getFreeId(tasks){
