@@ -26,19 +26,30 @@ class App extends React.Component{
 
 
     componentDidMount() {
-        const tasks = JSON.parse(localStorage.getItem('tasks'))
-        const theme = JSON.parse(localStorage.getItem('theme'))
-        if (tasks !== null)
-            this.setState({tasks:tasks})
-        else this.setState({tasks:{
-                todo: [{id: 1, task: "Task1"},{id: 2, task: "Task2"},],
-                inprogress: [{id: 1, task: "Task1"},{id: 2, task: "Task2"},],
-                blocked: [{id: 1, task: "Task1"},{id: 2, task: "Task2"},], 
-                completed: [{id: 1, task: "Task1"},{id: 2, task: "Task2"},],
-        }})
+        try
+        {
+            const tasks = JSON.parse(localStorage.getItem('tasks'))
+            const theme = JSON.parse(localStorage.getItem('theme'))
+            if (tasks !== null)
+                this.setState({tasks:tasks})
+            else this.setState({tasks:{
+                    todo: [{id: 1, task: "Task1"},{id: 2, task: "Task2"},],
+                    inprogress: [{id: 1, task: "Task1"},{id: 2, task: "Task2"},],
+                    blocked: [{id: 1, task: "Task1"},{id: 2, task: "Task2"},], 
+                    completed: [{id: 1, task: "Task1"},{id: 2, task: "Task2"},],
+            }})
 
-        if (theme !== null)
-            this.setState({isLight: theme})
+            if (theme !== null)
+                this.setState({isLight: theme})
+        } catch(ex){
+            this.setState({tasks:{
+                    todo: [{id: 1, task: "Task1"},{id: 2, task: "Task2"},],
+                    inprogress: [{id: 1, task: "Task1"},{id: 2, task: "Task2"},],
+                    blocked: [{id: 1, task: "Task1"},{id: 2, task: "Task2"},], 
+                    completed: [{id: 1, task: "Task1"},{id: 2, task: "Task2"},],
+            }})
+            this.setState({isLight: true})
+        }
     }
 
     componentDidUpdate(_, prev){
